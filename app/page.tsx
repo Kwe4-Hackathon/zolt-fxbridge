@@ -19,12 +19,16 @@ export default function LandingPage() {
 
 				{/* Buttons - Stack on mobile, side by side on tablet+ */}
 				<div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:gap-4 w-full sm:w-auto">
-					<button className="border border-[#2D8A3E] text-[#2D8A3E] px-4 sm:px-5 lg:px-6 py-2 sm:py-2 rounded-lg font-semibold hover:bg-green-50 transition-colors text-sm sm:text-base w-full sm:w-auto text-center">
-						Login →
-					</button>
-					<button className="bg-[#2D8A3E] text-white px-4 sm:px-5 lg:px-6 py-2 sm:py-2 rounded-lg font-semibold hover:bg-[#236b30] transition-colors text-sm sm:text-base w-full sm:w-auto text-center">
-						Sign up →
-					</button>
+					<Link href="/login">
+						<button className="border border-[#2D8A3E] text-[#2D8A3E] px-4 sm:px-5 lg:px-6 py-2 sm:py-2 rounded-lg font-semibold hover:bg-green-50 transition-colors text-sm sm:text-base w-full sm:w-auto text-center">
+							Login →
+						</button>
+					</Link>
+					<Link href="/signup">
+						<button className="bg-[#2D8A3E] text-white px-4 sm:px-5 lg:px-6 py-2 sm:py-2 rounded-lg font-semibold hover:bg-[#236b30] transition-colors text-sm sm:text-base w-full sm:w-auto text-center">
+							Sign up →
+						</button>
+					</Link>
 				</div>
 			</nav>
 
