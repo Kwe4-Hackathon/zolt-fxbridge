@@ -1,3 +1,5 @@
+// app/dashboard/page.tsx (Fixed version)
+
 "use client";
 import Sidebar from "@/components/Sidebar";
 import {
@@ -370,10 +372,23 @@ export default function DashboardPage() {
 										padding: "8px 12px",
 										fontSize: "12px",
 									}}
-									formatter={(value: number) => [
-										`₦${value.toFixed(2)}`,
-										"Rate",
-									]}
+									labelFormatter={(label) => `Time: ${label}`}
+									formatter={(value: any, name: any, props: any) => {
+										if (value === undefined || value === null) {
+											return ["₦0.00", "Rate"];
+										}
+
+										const numValue =
+											typeof value === "number"
+												? value
+												: parseFloat(String(value));
+
+										if (isNaN(numValue)) {
+											return ["₦0.00", "Rate"];
+										}
+
+										return [`₦${numValue.toFixed(2)}`, "Rate"];
+									}}
 								/>
 								<Area
 									type="monotone"
