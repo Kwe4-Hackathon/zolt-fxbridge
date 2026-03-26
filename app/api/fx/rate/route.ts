@@ -3,9 +3,9 @@ import { getInterswitchHeaders } from "@/lib/interswitch";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-	const { searchParams } = new URL(req.url);
-	const from = searchParams.get("from") || "NGN";
-	const to = searchParams.get("to") || "USD";
+	// Force NGN to USD only - ignore any query parameters
+	const from = "NGN";
+	const to = "USD";
 	const url = `https://sandbox.interswitchng.com/api/v1/exchange/rates?from=${from}&to=${to}`;
 
 	try {
@@ -22,7 +22,10 @@ export async function GET(req: Request) {
 
 		const data = await response.json();
 
+		// Return only NGN to USD rate
 		return NextResponse.json({
+			from: "NGN",
+			to: "USD",
 			rate: data?.rate || 1450.0,
 			fee: 12000,
 			provider: "Interswitch",
@@ -30,9 +33,11 @@ export async function GET(req: Request) {
 	} catch (error: any) {
 		console.error("Interswitch API Error Details:", error.message);
 
-		// Return fallback rate so UI doesn't break
+		// Return fallback NGN to USD rate
 		return NextResponse.json(
 			{
+				from: "NGN",
+				to: "USD",
 				rate: 1450.0,
 				fee: 12000,
 				provider: "Zolt Fallback (Demo Mode)",

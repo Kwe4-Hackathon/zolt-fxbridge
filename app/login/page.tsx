@@ -1,5 +1,10 @@
 "use client";
-import { Apple, Eye, EyeOff } from "lucide-react";
+import {
+	IconBoltFilled,
+	IconBrandAppleFilled,
+	IconBrandGoogleFilled,
+} from "@tabler/icons-react";
+import { Eye, EyeOff } from "lucide-react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -37,6 +42,15 @@ export default function LoginPage() {
 			{/* Left Form Side */}
 			<div className="w-full lg:w-1/2 flex flex-col justify-center px-12 lg:px-24">
 				<div className="max-w-md w-full">
+					<Link href="/" className="flex items-center gap-2 mb-3">
+						<div className="bg-[#34A853] p-2 rounded-lg text-white font-bold shadow-sm">
+							<IconBoltFilled />
+						</div>
+
+						<h1 className="text-2xl font-black tracking-tight bg-gradient-to-r from-[#34A853] to-[#1e7e34] bg-clip-text text-transparent">
+							ZOLT
+						</h1>
+					</Link>
 					<h1 className="text-4xl font-black mb-2 text-[#1A1A1A]">
 						Welcome back!
 					</h1>
@@ -109,10 +123,10 @@ export default function LoginPage() {
 
 					<div className="grid grid-cols-2 gap-4">
 						<button className="border p-3 rounded-xl flex items-center justify-center gap-2 font-bold hover:bg-gray-50 transition">
-							<Apple size={20} /> Google
+							<IconBrandGoogleFilled size={20} /> Google
 						</button>
 						<button className="border p-3 rounded-xl flex items-center justify-center gap-2 font-bold hover:bg-gray-50 transition">
-							<Apple size={20} /> Apple
+							<IconBrandAppleFilled size={20} /> Apple
 						</button>
 					</div>
 				</div>

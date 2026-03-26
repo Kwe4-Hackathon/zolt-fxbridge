@@ -94,7 +94,7 @@ export default function SettingsPage() {
 					mode: "TEST",
 					cust_email: session?.user?.email || "customer@zolt.com",
 					cust_name: session?.user?.name || "Zolt Customer",
-					redirect_url: `${window.location.origin}/settings?payment=success`,
+					site_redirect_url: `${window.location.origin}/settings?payment=success`,
 					onComplete: async (response: any) => {
 						console.log("Payment complete:", response);
 

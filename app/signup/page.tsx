@@ -1,5 +1,9 @@
 "use client";
-import { Apple } from "lucide-react";
+import {
+	IconBoltFilled,
+	IconBrandAppleFilled,
+	IconBrandGoogleFilled,
+} from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -62,8 +66,19 @@ export default function Signup() {
 
 	return (
 		<div className="flex min-h-screen bg-white">
-			<div className="w-full lg:w-1/2 flex flex-col justify-center px-12 lg:px-24">
-				<h1 className="text-4xl font-black mb-2">Create an Account</h1>
+			<div className="w-full lg:w-1/2 flex flex-col justify-center px-12 lg:px-24 py-10 sm:py-0">
+				<Link href="/" className="flex items-center gap-2 mb-3">
+					<div className="bg-[#34A853] p-2 rounded-lg text-white font-bold shadow-sm">
+						<IconBoltFilled />
+					</div>
+
+					<h1 className="text-2xl font-black tracking-tight bg-gradient-to-r from-[#34A853] to-[#1e7e34] bg-clip-text text-transparent">
+						ZOLT
+					</h1>
+				</Link>
+				<h1 className="text-3xl sm:text-4xl font-black mb-2">
+					Create an Account
+				</h1>
 				<p className="text-gray-500 mb-8">
 					Returning user?{" "}
 					<Link href="/login" className="text-[#34A853] underline font-bold">
@@ -147,11 +162,11 @@ export default function Signup() {
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
-						<button className="w-full border p-3 rounded-xl flex items-center justify-center gap-3 font-bold hover:bg-gray-50 transition">
-							<Apple size={20} /> Google
+						<button className="border p-3 rounded-xl flex items-center justify-center gap-2 font-bold hover:bg-gray-50 transition">
+							<IconBrandGoogleFilled size={20} /> Google
 						</button>
-						<button className="w-full border p-3 rounded-xl flex items-center justify-center gap-3 font-bold hover:bg-gray-50 transition">
-							<Apple size={20} /> Apple
+						<button className="border p-3 rounded-xl flex items-center justify-center gap-2 font-bold hover:bg-gray-50 transition">
+							<IconBrandAppleFilled size={20} /> Apple
 						</button>
 					</div>
 				</div>

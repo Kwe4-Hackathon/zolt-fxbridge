@@ -2,8 +2,8 @@
 import crypto from "crypto";
 
 export function getInterswitchHeaders(method: string, url: string) {
-	const clientId = process.env.INTERSWITCH_CLIENT_ID!;
-	const secretKey = process.env.INTERSWITCH_SECRET_KEY!;
+	const clientId = process.env.NEXT_PUBLIC_INTERSWITCH_CLIENT_ID!;
+	const secretKey = process.env.NEXT_PUBLIC_INTERSWITCH_SECRET_KEY!;
 	const timestamp = Date.now().toString();
 
 	// Create signature
