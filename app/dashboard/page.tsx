@@ -1,5 +1,3 @@
-// app/dashboard/page.tsx (Fixed version)
-
 "use client";
 import Sidebar from "@/components/Sidebar";
 import {

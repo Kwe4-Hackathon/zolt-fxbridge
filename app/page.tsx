@@ -43,9 +43,11 @@ export default function LandingPage() {
 
 						{/* Buttons */}
 						<div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-12 sm:mb-16 justify-center lg:justify-start">
-							<button className="bg-[#2D8A3E] text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-lg font-bold text-base sm:text-lg shadow-lg shadow-green-200 hover:bg-[#257635] transition-colors">
-								Get started
-							</button>
+							<Link href="/signup">
+								<button className="bg-[#2D8A3E] text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-lg font-bold text-base sm:text-lg shadow-lg shadow-green-200 hover:bg-[#257635] transition-colors">
+									Get started
+								</button>
+							</Link>
 							<button className="border border-gray-200 text-gray-700 px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-lg font-bold text-base sm:text-lg bg-white hover:border-gray-300 transition-colors">
 								Learn more
 							</button>
