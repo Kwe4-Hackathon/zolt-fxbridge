@@ -17,25 +17,22 @@ export default function LandingPage() {
 					</span>
 				</div>
 
-				{/* Buttons - Stack on mobile, side by side on tablet+ */}
 				<div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:gap-4 w-full sm:w-auto">
 					<Link href="/login">
-						<button className="border border-[#2D8A3E] text-[#2D8A3E] px-4 sm:px-5 lg:px-6 py-2 sm:py-2 rounded-lg font-semibold hover:bg-green-50 transition-colors text-sm sm:text-base w-full sm:w-auto text-center">
+						<button className="border border-[#2D8A3E] cursor-pointer text-[#2D8A3E] px-4 sm:px-5 lg:px-6 py-2 sm:py-2 rounded-lg font-semibold hover:bg-green-50 transition-colors text-sm sm:text-base w-full sm:w-auto text-center">
 							Login →
 						</button>
 					</Link>
 					<Link href="/signup">
-						<button className="bg-[#2D8A3E] text-white px-4 sm:px-5 lg:px-6 py-2 sm:py-2 rounded-lg font-semibold hover:bg-[#236b30] transition-colors text-sm sm:text-base w-full sm:w-auto text-center">
+						<button className="bg-[#2D8A3E] text-white cursor-pointer px-4 sm:px-5 lg:px-6 py-2 sm:py-2 rounded-lg font-semibold hover:bg-[#236b30] transition-colors text-sm sm:text-base w-full sm:w-auto text-center">
 							Sign up →
 						</button>
 					</Link>
 				</div>
 			</nav>
 
-			{/* --- HERO SECTION --- */}
 			<section className="overflow-hidden bg-gradient-to-b from-white to-[#F8F9FA]">
 				<div className="mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20 py-12  flex flex-col lg:flex-row items-center justify-between w-full max-w-[1440px] min-h-[80vh] gap-8 lg:gap-12">
-					{/* LEFT SIDE: Text Content */}
 					<div className="z-10 w-full lg:w-1/2 text-center lg:text-left px-4 sm:px-0">
 						<h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-[64px] leading-[1.2] font-black mb-4 sm:mb-6 lg:mb-8 tracking-tight">
 							Early pay, Automatic savings, Transform your money habits
@@ -48,16 +45,15 @@ export default function LandingPage() {
 						{/* Buttons */}
 						<div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-12 sm:mb-16 justify-center lg:justify-start">
 							<Link href="/signup">
-								<button className="bg-[#2D8A3E] text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-lg font-bold text-base sm:text-lg shadow-lg shadow-green-200 hover:bg-[#257635] transition-colors">
+								<button className="bg-[#2D8A3E] cursor-pointer text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-lg font-bold text-base sm:text-lg shadow-lg shadow-green-200 hover:bg-[#257635] transition-colors">
 									Get started
 								</button>
 							</Link>
-							<button className="border border-gray-200 text-gray-700 px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-lg font-bold text-base sm:text-lg bg-white hover:border-gray-300 transition-colors">
+							<button className="border border-gray-200 cursor-pointer text-gray-700 px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-lg font-bold text-base sm:text-lg bg-white hover:border-gray-300 transition-colors">
 								Learn more
 							</button>
 						</div>
 
-						{/* Trusted By Section */}
 						<div className="w-full">
 							<p className="font-bold text-xs uppercase text-gray-400 mb-4 sm:mb-6 text-center lg:text-left">
 								Trusted by <span className="text-gray-600">500+ Companies</span>
@@ -71,7 +67,6 @@ export default function LandingPage() {
 						</div>
 					</div>
 
-					{/* RIGHT SIDE: LARGER IMAGE */}
 					<div className="relative w-full lg:w-1/2 flex justify-center items-center mt-8 lg:mt-0">
 						<div className="relative w-full  mb-[-48px] max-w-[600px] md:max-w-[700px] lg:max-w-[800px]">
 							<Image
@@ -83,7 +78,6 @@ export default function LandingPage() {
 								priority
 							/>
 
-							{/* Optional: Decorative background glow */}
 							<div className="absolute inset-0 bg-gradient-to-r from-[#34A853]/10 to-transparent rounded-full blur-3xl -z-10"></div>
 						</div>
 					</div>
