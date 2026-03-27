@@ -27,7 +27,6 @@ export default function SettingsPage() {
 	const [loading, setLoading] = useState(true);
 	const [paystackLoaded, setPaystackLoaded] = useState(false);
 
-	// Load Paystack script
 	useEffect(() => {
 		if (window.PaystackPop) {
 			setPaystackLoaded(true);
@@ -134,10 +133,8 @@ export default function SettingsPage() {
 		setIsFunding(true);
 
 		try {
-			// Generate unique reference
 			const reference = `ZLT-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
 
-			// Store reference for verification
 			localStorage.setItem(
 				"pending_topup",
 				JSON.stringify({
@@ -147,11 +144,10 @@ export default function SettingsPage() {
 				}),
 			);
 
-			// Configure Paystack - using the exact format Paystack expects
 			const config = {
 				key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
 				email: session?.user?.email,
-				amount: amount * 100, // Convert to kobo
+				amount: amount * 100,
 				ref: reference,
 				currency: "NGN",
 				callback: paymentCallback,
@@ -177,8 +173,8 @@ export default function SettingsPage() {
 		return (
 			<div className="flex min-h-screen bg-[#F8F9FA]">
 				<Sidebar active="settings" />
-				<main className="flex-1 p-12 flex items-center justify-center">
-					<Loader2 className="w-8 h-8 animate-spin text-[#34A853]" />
+				<main className="flex-1 p-4 sm:p-6 md:p-8 lg:p-12 flex items-center justify-center">
+					<Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-[#34A853]" />
 				</main>
 			</div>
 		);
@@ -187,42 +183,50 @@ export default function SettingsPage() {
 	return (
 		<div className="flex min-h-screen bg-[#F8F9FA]">
 			<Sidebar active="settings" />
-			<main className="flex-1 p-12 overflow-y-auto">
-				<header className="mb-10">
-					<h1 className="text-3xl font-black text-[#1A1A1A]">Settings</h1>
-					<p className="text-gray-500 font-medium">
+			<main className="flex-1 p-4 sm:p-6 md:p-8 lg:p-12 overflow-y-auto">
+				<header className="mb-6 sm:mb-8 md:mb-10">
+					<h1 className="text-2xl sm:text-3xl font-black text-[#1A1A1A]">
+						Settings
+					</h1>
+					<p className="text-sm sm:text-base text-gray-500 font-medium">
 						Manage your wallet and account security.
 					</p>
 				</header>
 
-				<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-					<div className="lg:col-span-2 space-y-6">
-						<section className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
-							<div className="flex justify-between items-center mb-8">
-								<div className="flex items-center gap-4">
-									<div className="bg-[#E8F5E9] p-3 rounded-2xl">
-										<Wallet className="text-[#34A853]" />
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+					{/* Left Column - Wallet Section */}
+					<div className="lg:col-span-2 space-y-6 sm:space-y-8">
+						{/* Wallet Card */}
+						<section className="bg-white p-5 sm:p-6 md:p-8 rounded-[24px] sm:rounded-[28px] md:rounded-[32px] shadow-sm border border-gray-100">
+							{/* Balance Header */}
+							<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
+								<div className="flex items-center gap-3 sm:gap-4">
+									<div className="bg-[#E8F5E9] p-2 sm:p-3 rounded-xl sm:rounded-2xl">
+										<Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-[#34A853]" />
 									</div>
 									<div>
-										<h2 className="font-black text-xl">Zolt Wallet</h2>
-										<p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
+										<h2 className="font-black text-lg sm:text-xl">
+											Zolt Wallet
+										</h2>
+										<p className="text-[10px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest">
 											Naira Account
 										</p>
 									</div>
 								</div>
-								<div className="text-right">
-									<p className="text-3xl font-black">
+								<div className="text-left sm:text-right w-full sm:w-auto">
+									<p className="text-2xl sm:text-3xl font-black">
 										₦{balance.toLocaleString()}
 									</p>
-									<span className="text-xs text-green-600 font-bold bg-green-50 px-2 py-1 rounded-md">
+									<span className="text-[10px] sm:text-xs text-green-600 font-bold bg-green-50 px-2 py-1 rounded-md">
 										Active
 									</span>
 								</div>
 							</div>
 
-							<div className="flex gap-4">
-								<div className="flex-1 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
-									<label className="text-[10px] font-black text-gray-400 uppercase mb-2 block">
+							{/* Top Up Section */}
+							<div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+								<div className="flex-1 bg-gray-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-dashed border-gray-200">
+									<label className="text-[8px] sm:text-[10px] font-black text-gray-400 uppercase mb-1 sm:mb-2 block">
 										Amount to Fund (NGN)
 									</label>
 									<input
@@ -230,13 +234,13 @@ export default function SettingsPage() {
 										placeholder="Minimum ₦100"
 										value={topupAmount}
 										onChange={(e) => setTopupAmount(e.target.value)}
-										className="bg-transparent text-2xl font-black outline-none w-full"
+										className="bg-transparent text-xl sm:text-2xl font-black outline-none w-full"
 										min="100"
 										max="1000000"
 										step="100"
 										disabled={isFunding}
 									/>
-									<p className="text-xs text-gray-400 mt-1">
+									<p className="text-[10px] sm:text-xs text-gray-400 mt-1">
 										Min: ₦100 | Max: ₦1,000,000 | Powered by Paystack
 									</p>
 								</div>
@@ -248,49 +252,79 @@ export default function SettingsPage() {
 										parseFloat(topupAmount) < 100 ||
 										!paystackLoaded
 									}
-									className="bg-[#1A1A1A] text-white px-8 rounded-2xl font-bold flex items-center gap-2 hover:bg-black transition-all disabled:bg-gray-300">
+									className="bg-[#1A1A1A] text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all disabled:bg-gray-300 disabled:cursor-not-allowed">
 									{isFunding ? (
-										<Loader2 size={20} className="animate-spin" />
+										<Loader2 size={18} className="animate-spin" />
 									) : (
-										<Plus size={20} />
+										<Plus size={18} />
 									)}
-									{isFunding ? "Processing..." : "Top Up"}
+									<span className="text-sm sm:text-base">
+										{isFunding ? "Processing..." : "Top Up"}
+									</span>
 								</button>
 							</div>
 
+							{/* Loading Indicator */}
 							{!paystackLoaded && (
 								<div className="mt-4 p-3 bg-yellow-50 rounded-xl flex items-start gap-2">
 									<Loader2
-										size={16}
+										size={14}
 										className="animate-spin text-yellow-600 mt-0.5"
 									/>
-									<p className="text-xs text-yellow-800">
+									<p className="text-[11px] sm:text-xs text-yellow-800">
 										Loading payment service...
 									</p>
 								</div>
 							)}
 
+							{/* Info Message */}
 							<div className="mt-4 p-3 bg-blue-50 rounded-xl flex items-start gap-2">
-								<AlertCircle size={16} className="text-blue-600 mt-0.5" />
-								<p className="text-xs text-blue-800">
+								<AlertCircle
+									size={14}
+									className="text-blue-600 mt-0.5 flex-shrink-0"
+								/>
+								<p className="text-[11px] sm:text-xs text-blue-800 leading-relaxed">
 									Complete your payment securely with Paystack. Multiple payment
-									options available.
+									options available: Card, Transfer, USSD, Wallet.
 								</p>
+							</div>
+						</section>
+
+						{/* Security Section */}
+						<section className="bg-white p-5 sm:p-6 md:p-8 rounded-[24px] sm:rounded-[28px] md:rounded-[32px] shadow-sm border border-gray-100">
+							<h2 className="font-black text-lg sm:text-xl mb-5 sm:mb-6">
+								Security Settings
+							</h2>
+							<div className="space-y-3 sm:space-y-4">
+								<div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-xl sm:rounded-2xl">
+									<div className="flex items-center gap-2 sm:gap-3">
+										<ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-[#34A853]" />
+										<span className="font-bold text-sm sm:text-base text-gray-700">
+											Two-Factor Authentication
+										</span>
+									</div>
+									<button className="w-10 h-5 sm:w-12 sm:h-6 bg-[#34A853] rounded-full p-0.5 sm:p-1 hover:bg-[#2d9147] transition-colors">
+										<div className="w-3 h-3 sm:w-4 sm:h-4 bg-white rounded-full ml-auto"></div>
+									</button>
+								</div>
 							</div>
 						</section>
 					</div>
 
+					{/* Right Column - Info Card */}
 					<div className="space-y-6">
-						<div className="bg-gradient-to-br from-[#00425F] to-[#003349] text-white p-8 rounded-[32px] relative overflow-hidden">
-							<ShieldCheck className="absolute -right-4 -bottom-4 text-white/10 w-32 h-32" />
-							<h3 className="font-black text-lg mb-2">Paystack Secured</h3>
-							<p className="text-sm text-blue-100 mb-6">
-								Your funds are protected by Paystack's enterprise-grade
-								security.
+						<div className="bg-gradient-to-br from-[#00425F] to-[#003349] text-white p-5 sm:p-6 md:p-8 rounded-[24px] sm:rounded-[28px] md:rounded-[32px] relative overflow-hidden">
+							<ShieldCheck className="absolute -right-4 -bottom-4 text-white/10 w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32" />
+							<h3 className="font-black text-base sm:text-lg mb-2">
+								Paystack Secured
+							</h3>
+							<p className="text-xs sm:text-sm text-blue-100 mb-4 sm:mb-6 leading-relaxed">
+								Your funds are protected by Paystack's enterprise-grade security
+								with PCI-DSS Level 1 compliance.
 							</p>
-							<div className="flex flex-col gap-2 text-xs font-bold uppercase tracking-tighter">
+							<div className="flex flex-col gap-1 sm:gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-tighter">
 								<div className="flex items-center gap-2">
-									<CreditCard size={14} />
+									<CreditCard size={12} className="sm:w-3.5 sm:h-3.5" />
 									PCI-DSS Level 1 Compliant
 								</div>
 							</div>

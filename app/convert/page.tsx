@@ -14,7 +14,6 @@ export default function ConvertPage() {
 	const [loading, setLoading] = useState<boolean>(true);
 	const [provider, setProvider] = useState<string>("Live FX");
 
-	// ✅ FETCH REAL RATE (FROM YOUR FIXED BACKEND)
 	const fetchLiveRate = async () => {
 		try {
 			setLoading(true);
@@ -49,11 +48,19 @@ export default function ConvertPage() {
 		return () => clearInterval(interval);
 	}, []);
 
-	// ✅ SAFE CALCULATION
 	const usdEquivalent =
 		exchangeRate > 0 ? (ngnAmount - serviceFee) / exchangeRate : 0;
 
+	const isAmountValid = ngnAmount > serviceFee;
+
 	const handleLockRate = async () => {
+		if (!isAmountValid) {
+			toast.error(
+				`Amount must be greater than ₦${serviceFee.toLocaleString()} to cover fees`,
+			);
+			return;
+		}
+
 		try {
 			const response = await fetch("/api/fx/lock", {
 				method: "POST",
@@ -72,10 +79,11 @@ export default function ConvertPage() {
 				);
 				router.push("/rate-lock");
 			} else {
-				throw new Error();
+				const error = await response.json();
+				throw new Error(error.error || "Failed to lock rate");
 			}
-		} catch {
-			toast.error("Failed to lock rate. Try again.");
+		} catch (error: any) {
+			toast.error(error.message || "Failed to lock rate. Try again.");
 		}
 	};
 
@@ -83,7 +91,7 @@ export default function ConvertPage() {
 		<div className="flex min-h-screen bg-[#F8F9FA]">
 			<Sidebar active="convert" />
 
-			<main className="flex-1 p-4 sm:p-6 md:p-8 lg:p-12">
+			<main className="flex-1 p-4 sm:p-6 md:p-8 lg:p-12 overflow-y-auto">
 				<header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8 md:mb-10">
 					<div>
 						<h1 className="text-2xl sm:text-3xl font-black text-[#1A1A1A]">
@@ -96,112 +104,135 @@ export default function ConvertPage() {
 
 					<div className="flex items-center gap-2 bg-[#00425F] text-white px-3 sm:px-4 py-2 rounded-full shadow-md">
 						<ShieldCheck size={14} className="text-[#00CCFF]" />
-						<span className="text-[10px] font-black uppercase tracking-widest">
+						<span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest">
 							Live FX Engine
 						</span>
 					</div>
 				</header>
 
-				<section className="bg-[#E8F5E9] rounded-[40px] p-4 sm:p-6 md:p-8 lg:p-12 max-w-5xl mx-auto shadow-sm">
-					<div className="flex flex-col items-center mb-10">
-						<span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+				<section className="bg-[#E8F5E9] rounded-[32px] sm:rounded-[40px] p-4 sm:p-6 md:p-8 lg:p-12 max-w-5xl mx-auto shadow-sm">
+					{/* Current Rate Display */}
+					<div className="flex flex-col items-center mb-8 sm:mb-10 md:mb-12">
+						<span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
 							Current Market Rate ({provider})
 						</span>
 
-						<div className="bg-white px-6 py-3 rounded-2xl shadow-sm flex items-center gap-3">
+						<div className="bg-white px-4 sm:px-6 py-2 sm:py-3 rounded-2xl shadow-sm flex items-center gap-2 sm:gap-3">
 							<span
-								className={`font-black text-lg ${
+								className={`font-bold text-base sm:text-lg ${
 									loading ? "animate-pulse text-gray-300" : ""
 								}`}>
 								1 USD ={" "}
-								{exchangeRate.toLocaleString(undefined, {
-									minimumFractionDigits: 2,
-									maximumFractionDigits: 2,
-								})}{" "}
+								{exchangeRate > 0
+									? exchangeRate.toLocaleString(undefined, {
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2,
+										})
+									: "---"}{" "}
 								NGN
 							</span>
 
 							<RefreshCcw
 								size={16}
 								onClick={fetchLiveRate}
-								className={`text-[#34A853] cursor-pointer ${
+								className={`text-[#34A853] cursor-pointer hover:rotate-180 transition-transform duration-300 ${
 									loading ? "animate-spin" : ""
 								}`}
 							/>
 						</div>
 					</div>
 
-					<div className="space-y-6 mb-12">
+					{/* Amount Input */}
+					<div className="space-y-6 mb-8 sm:mb-10 md:mb-12">
 						<div className="flex flex-col items-center">
-							<label className="text-sm font-bold text-gray-500 mb-3 uppercase">
+							<label className="text-xs sm:text-sm font-bold text-gray-500 mb-2 sm:mb-3 uppercase tracking-wide">
 								Enter Amount in NGN
 							</label>
 
-							<div className="bg-white w-full flex items-center p-6 rounded-[24px] shadow-sm">
+							<div className="bg-white w-full flex flex-col sm:flex-row items-center p-4 sm:p-6 rounded-[24px] shadow-sm gap-4 sm:gap-0">
 								<input
 									type="number"
 									value={ngnAmount}
 									onChange={(e) => setNgnAmount(Number(e.target.value))}
-									className="text-3xl font-black flex-1 outline-none bg-transparent"
+									className="text-2xl sm:text-3xl font-black flex-1 outline-none bg-transparent w-full text-center sm:text-left"
+									placeholder="Enter amount"
+									min={serviceFee + 1}
 								/>
 
-								<div className="flex items-center gap-3 border-l pl-6 ml-6">
+								<div className="flex items-center gap-2 sm:gap-3 border-t sm:border-t-0 sm:border-l pt-4 sm:pt-0 sm:pl-6 mt-4 sm:mt-0 w-full sm:w-auto justify-center">
 									<img
 										src="https://flagcdn.com/w40/ng.png"
-										className="w-8 h-6"
+										className="w-6 h-5 sm:w-8 sm:h-6"
+										alt="Nigeria flag"
 									/>
-									<span className="font-black text-xl">NGN</span>
+									<span className="font-black text-lg sm:text-xl">NGN</span>
 								</div>
 							</div>
+
+							{!isAmountValid && ngnAmount > 0 && (
+								<p className="mt-2 text-xs text-red-500">
+									Minimum amount is ₦{serviceFee.toLocaleString()} (covers
+									service fee)
+								</p>
+							)}
 						</div>
 					</div>
 
-					<div className="flex justify-center gap-6 mb-16">
+					{/* Action Buttons */}
+					<div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 mb-12 sm:mb-16">
 						<button
 							onClick={handleLockRate}
-							disabled={loading || ngnAmount <= serviceFee}
-							className="bg-[#34A853] text-white cursor-pointer px-12 py-4 rounded-2xl font-black text-lg">
+							disabled={loading || !isAmountValid || exchangeRate === 0}
+							className={`bg-[#34A853] text-white cursor-pointer px-8 sm:px-12 py-3 sm:py-4 rounded-2xl font-black text-base sm:text-lg transition-all hover:scale-105 active:scale-95 ${
+								loading || !isAmountValid || exchangeRate === 0
+									? "opacity-50 cursor-not-allowed hover:scale-100"
+									: ""
+							}`}>
 							Lock Rate
 						</button>
 
 						<button
 							onClick={() => router.push("/transfer")}
-							className="border-2 border-[#34A853] cursor-pointer text-[#34A853] px-12 py-4 rounded-2xl font-black text-lg">
+							className="border-2 border-[#34A853] cursor-pointer text-[#34A853] px-8 sm:px-12 py-3 sm:py-4 rounded-2xl font-black text-base sm:text-lg hover:bg-[#34A853]/5 transition-all">
 							Send Payment
 						</button>
 					</div>
 
-					<div className="max-w-2xl mx-auto space-y-4">
-						<div className="bg-white/60 p-6 rounded-2xl flex justify-between">
-							<span className="text-gray-500 font-bold uppercase">
+					{/* Summary Cards */}
+					<div className="max-w-2xl mx-auto space-y-3 sm:space-y-4">
+						<div className="bg-white/60 p-4 sm:p-6 rounded-xl sm:rounded-2xl flex justify-between items-center">
+							<span className="text-xs sm:text-sm text-gray-500 font-bold uppercase">
 								You Send
 							</span>
-							<span className="text-2xl font-black">
+							<span className="text-xl sm:text-2xl font-black">
 								₦{ngnAmount.toLocaleString()}
 							</span>
 						</div>
 
-						<div className="bg-white/60 p-6 rounded-2xl flex justify-between">
-							<span className="text-gray-500 font-bold uppercase">FX Fee</span>
-							<span className="text-xl font-black text-[#D93025]">
+						<div className="bg-white/60 p-4 sm:p-6 rounded-xl sm:rounded-2xl flex justify-between items-center">
+							<span className="text-xs sm:text-sm text-gray-500 font-bold uppercase">
+								FX Fee
+							</span>
+							<span className="text-lg sm:text-xl font-black text-[#D93025]">
 								₦{serviceFee.toLocaleString()}
 							</span>
 						</div>
 
-						<div className="bg-white/60 p-6 rounded-2xl flex justify-between">
-							<span className="text-gray-500 font-bold uppercase">
+						<div className="bg-white/60 p-4 sm:p-6 rounded-xl sm:rounded-2xl flex justify-between items-center">
+							<span className="text-xs sm:text-sm text-gray-500 font-bold uppercase">
 								Recipient Gets
 							</span>
-							<span className="text-2xl font-black text-[#34A853]">
-								${usdEquivalent.toFixed(2)}
+							<span className="text-xl sm:text-2xl font-black text-[#34A853]">
+								${usdEquivalent > 0 ? usdEquivalent.toFixed(2) : "0.00"}
 							</span>
 						</div>
 					</div>
 				</section>
 
-				<div className="mt-8 text-center text-gray-400 text-sm italic">
-					Live FX rates updated every 60 seconds. 1 USD ={" "}
-					{exchangeRate.toFixed(2)} NGN
+				{/* Footer */}
+				<div className="mt-6 sm:mt-8 text-center text-gray-400 text-xs sm:text-sm italic">
+					Live FX rates updated every 60 seconds.
+					{exchangeRate > 0 && <> 1 USD = ₦{exchangeRate.toFixed(2)} NGN</>}
 				</div>
 			</main>
 		</div>
