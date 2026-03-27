@@ -1,5 +1,5 @@
-// app/api/transfer/route.ts (Updated)
-import { getInterswitchHeaders } from "@/lib/interswitch";
+// app/api/transactions/transfer/route.ts
+import { transferFunds } from "@/lib/interswitch-v5";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import { getServerSession } from "next-auth";
@@ -8,95 +8,100 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
 	try {
 		const session = await getServerSession();
-		if (!session || !session.user) {
+		if (!session || !session.user?.email) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
 
 		const { beneficiary, amountNgn } = await req.json();
-		const txnId = `ZLT-${Math.floor(100000 + Math.random() * 900000)}`;
-		const SERVICE_FEE = 12000;
+
+		if (!beneficiary || !amountNgn || amountNgn <= 0) {
+			return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+		}
 
 		await connectDB();
-
-		// Get user with locked rate
 		const user = await User.findOne({ email: session.user.email });
+
 		if (!user) {
 			return NextResponse.json({ error: "User not found" }, { status: 404 });
 		}
 
-		// Check if there's a locked rate
+		// Validate locked rate
 		const lockedRate = user.lockedRate;
 		if (!lockedRate || lockedRate.expiresAt < new Date()) {
 			return NextResponse.json(
-				{ error: "No valid locked rate found. Please lock a rate first." },
+				{ error: "No valid locked rate found" },
 				{ status: 400 },
 			);
 		}
 
-		// Check if amount matches locked amount
-		if (amountNgn !== lockedRate.amountNgn) {
-			return NextResponse.json(
-				{ error: "Amount doesn't match locked rate amount" },
-				{ status: 400 },
-			);
-		}
-
-		// Check balance
 		if (user.ngnBalance < amountNgn) {
 			return NextResponse.json(
-				{ error: "Insufficient wallet balance" },
+				{ error: "Insufficient balance" },
 				{ status: 400 },
 			);
 		}
 
-		// Prepare Interswitch Disbursement (Simulated)
-		const url =
-			"https://sandbox.interswitchng.com/api/v2/disbursements/transfers";
-		const headers = getInterswitchHeaders("POST", url);
+		const txnId = `ZLT-${Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`;
+		const SERVICE_FEE = 12000;
 
-		// Simulate Interswitch success for hackathon
-		const interswitchSuccess = true;
+		try {
+			// Process transfer via Interswitch v5 API
+			const transferResult = await transferFunds({
+				amount: amountNgn * 100, // Convert to kobo
+				bankCode: beneficiary.bankCode,
+				accountNumber: beneficiary.accountNumber,
+				accountName: beneficiary.name,
+				narration: beneficiary.narration || "FXB Transfer",
+				transactionReference: txnId,
+			});
 
-		if (!interswitchSuccess) {
-			throw new Error("Interswitch Gateway Timeout");
-		}
+			const amountUsd = (amountNgn - SERVICE_FEE) / lockedRate.rate;
 
-		// Calculate final USD Value
-		const amountUsd = (amountNgn - SERVICE_FEE) / lockedRate.rate;
-
-		// Atomic Update: Deduct balance, add transaction, clear locked rate
-		const updatedUser = await User.findOneAndUpdate(
-			{ email: session.user.email },
-			{
-				$inc: { ngnBalance: -amountNgn },
-				$push: {
-					transactions: {
-						txnId,
-						recipient: beneficiary.name,
-						bankName: beneficiary.bankName,
-						accountNumber: beneficiary.account,
-						amountNgn,
-						amountUsd: parseFloat(amountUsd.toFixed(2)),
-						rate: lockedRate.rate,
-						status: "Completed",
-						createdAt: new Date(),
+			// Update user balance and record transaction
+			const updatedUser = await User.findOneAndUpdate(
+				{ email: session.user.email },
+				{
+					$inc: { ngnBalance: -amountNgn },
+					$push: {
+						transactions: {
+							txnId,
+							type: "debit",
+							recipient: beneficiary.name,
+							recipientAccount: beneficiary.accountNumber,
+							bankCode: beneficiary.bankCode,
+							amountNgn,
+							amountUsd: parseFloat(amountUsd.toFixed(2)),
+							serviceFee: SERVICE_FEE,
+							rate: lockedRate.rate,
+							status: "completed",
+							reference: transferResult.transactionReference || txnId,
+							narration: beneficiary.narration,
+							createdAt: new Date(),
+						},
 					},
+					$unset: { lockedRate: "" },
 				},
-				$unset: { lockedRate: "" },
-			},
-			{ new: true },
-		);
+				{ new: true },
+			);
 
-		return NextResponse.json({
-			success: true,
-			txnId,
-			message: "Transfer successful",
-			newBalance: updatedUser.ngnBalance,
-		});
+			return NextResponse.json({
+				success: true,
+				txnId,
+				reference: transferResult.transactionReference,
+				message: "Transfer successful",
+				newBalance: updatedUser?.ngnBalance,
+			});
+		} catch (error: any) {
+			console.error("Transfer error:", error);
+			return NextResponse.json(
+				{ error: error.message || "Transfer processing failed" },
+				{ status: 502 },
+			);
+		}
 	} catch (error: any) {
-		console.error("Transfer Route Error:", error.message);
+		console.error("API error:", error);
 		return NextResponse.json(
-			{ error: error.message || "Internal Transfer Failure" },
+			{ error: error.message || "Internal server error" },
 			{ status: 500 },
 		);
 	}

@@ -1,5 +1,6 @@
 "use client";
 import Sidebar from "@/components/Sidebar";
+import { IconWallet } from "@tabler/icons-react";
 import {
 	ArrowDownRight,
 	ArrowUpRight,
@@ -7,6 +8,7 @@ import {
 	TrendingUp,
 	Wallet,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import {
@@ -170,7 +172,7 @@ export default function DashboardPage() {
 			const newRate = await fetchRealTimeRate();
 			const newHistoricalData = await generateHistoricalData(newRate);
 			setMarketData(newHistoricalData);
-			await fetchTransactions(); // Also refresh transactions
+			await fetchTransactions();
 			toast.success("Market data updated");
 		} catch (error) {
 			toast.error("Failed to refresh data");
@@ -240,16 +242,27 @@ export default function DashboardPage() {
 							Real-time market overview and portfolio status
 						</p>
 					</div>
-					<button
-						onClick={refreshMarketData}
-						disabled={refreshing}
-						className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-50 text-sm sm:text-base">
-						<RefreshCcw
-							size={16}
-							className={refreshing ? "animate-spin" : ""}
-						/>
-						<span className="font-medium">Refresh</span>
-					</button>
+					<div className="flex flex-row justify-end items-center gap-2">
+						<button
+							onClick={refreshMarketData}
+							disabled={refreshing}
+							className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-50 text-sm cursor-pointer sm:text-base">
+							<RefreshCcw
+								size={16}
+								className={refreshing ? "animate-spin" : ""}
+							/>
+							<span className="font-medium">Refresh</span>
+						</button>
+						<Link href="/settings">
+							<button
+								onClick={refreshMarketData}
+								disabled={refreshing}
+								className="flex items-center cursor-pointer gap-2 px-3 sm:px-4 py-2 bg-[#34A853] rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-50 text-sm sm:text-base">
+								<IconWallet color="white" size={16} />
+								<span className="font-medium text-white">Top Up Wallet</span>
+							</button>
+						</Link>
+					</div>
 				</div>
 
 				{/* Stats Cards */}

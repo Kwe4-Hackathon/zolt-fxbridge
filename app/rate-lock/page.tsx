@@ -121,7 +121,7 @@ export default function RateLockPage() {
 					<div className="flex justify-center mb-12">
 						<button
 							onClick={() => router.push("/transfer")}
-							className="bg-[#34A853] text-white px-16 py-5 rounded-[22px] font-black text-lg hover:scale-105 transition shadow-xl shadow-green-100 active:scale-95">
+							className="bg-[#34A853] cursor-pointer text-white px-16 py-5 rounded-[22px] font-black text-lg hover:scale-105 transition shadow-xl shadow-green-100 active:scale-95">
 							Proceed with Payment
 						</button>
 					</div>

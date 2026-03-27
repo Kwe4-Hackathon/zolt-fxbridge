@@ -1,49 +1,49 @@
 // app/api/fx/rate/route.ts
-import { getInterswitchHeaders } from "@/lib/interswitch";
 import { NextResponse } from "next/server";
 
-export async function GET(req: Request) {
-	// Force NGN to USD only - ignore any query parameters
-	const from = "NGN";
-	const to = "USD";
-	const url = `https://sandbox.interswitchng.com/api/v1/exchange/rates?from=${from}&to=${to}`;
-
+export async function GET() {
 	try {
-		const headers = getInterswitchHeaders("GET", url);
+		const API_KEY = process.env.EXCHANGE_RATE_API_KEY;
+
+		if (!API_KEY) {
+			throw new Error("Missing EXCHANGE_RATE_API_KEY");
+		}
+
+		const url = `https://v6.exchangerate-api.com/v6/${API_KEY}/latest/USD`;
 
 		const response = await fetch(url, {
-			headers,
-			signal: AbortSignal.timeout(5000),
+			cache: "no-store",
+			signal: AbortSignal.timeout(8000),
 		});
 
 		if (!response.ok) {
-			throw new Error(`Interswitch responded with ${response.status}`);
+			throw new Error(`ExchangeRate API error: ${response.status}`);
 		}
 
 		const data = await response.json();
 
-		// Return only NGN to USD rate
+		const ngnRate = data.conversion_rates?.NGN;
+
+		if (!ngnRate) {
+			throw new Error("NGN rate missing");
+		}
+
 		return NextResponse.json({
-			from: "NGN",
-			to: "USD",
-			rate: data?.rate || 1450.0,
-			fee: 12000,
-			provider: "Interswitch",
+			from: "USD",
+			to: "NGN",
+			rate: ngnRate, // ✅ CORRECT
+			provider: "ExchangeRate API",
+			lastUpdated: data.time_last_update_utc,
 		});
 	} catch (error: any) {
-		console.error("Interswitch API Error Details:", error.message);
+		console.error("FX ERROR:", error.message);
 
-		// Return fallback NGN to USD rate
 		return NextResponse.json(
 			{
-				from: "NGN",
-				to: "USD",
-				rate: 1450.0,
-				fee: 12000,
-				provider: "Zolt Fallback (Demo Mode)",
-				isFallback: true,
+				error: "Failed to fetch exchange rate",
+				details: error.message,
 			},
-			{ status: 200 },
+			{ status: 500 },
 		);
 	}
 }

@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "@tabler/icons-react": "^3.40.0",
+    "async_hooks": "^1.0.0",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
+    "https": "^1.0.0",
     "lucide-react": "^1.6.0",
     "mongoose": "^9.3.2",
     "next": "16.2.1",

@@ -1,4 +1,3 @@
-// app/settings/page.tsx
 "use client";
 import Sidebar from "@/components/Sidebar";
 import { CreditCard, Loader2, Plus, ShieldCheck, Wallet } from "lucide-react";
@@ -19,36 +18,69 @@ export default function SettingsPage() {
 	const [isFunding, setIsFunding] = useState(false);
 	const [loading, setLoading] = useState(true);
 
-	// Fetch user balance on load
+	// ✅ PROPER SCRIPT LOADER
+	const loadInterswitchScript = () => {
+		return new Promise<void>((resolve, reject) => {
+			if (typeof window.webpayCheckout === "function") return resolve();
+
+			const sources = [
+				"https://webpay.interswitchng.com/inline-checkout.js",
+				"https://newwebpay.interswitchng.com/inline-checkout.js",
+			];
+
+			let loaded = false;
+
+			const loadScript = (index: number) => {
+				if (index >= sources.length) {
+					return reject(new Error("All Interswitch script sources failed"));
+				}
+
+				const script = document.createElement("script");
+				script.src = sources[index];
+				script.async = true;
+
+				script.onload = () => {
+					loaded = true;
+					resolve();
+				};
+
+				script.onerror = () => {
+					console.warn(`Failed loading: ${sources[index]}`);
+					loadScript(index + 1);
+				};
+
+				document.body.appendChild(script);
+			};
+
+			loadScript(0);
+		});
+	};
+
+	// Fetch balance
 	useEffect(() => {
 		const fetchBalance = async () => {
 			try {
 				const res = await fetch("/api/user/balance");
 				const data = await res.json();
-				if (res.ok) {
-					setBalance(data.balance);
-				}
+				if (res.ok) setBalance(data.balance);
 			} catch (error) {
-				console.error("Failed to fetch balance:", error);
+				console.error(error);
 			} finally {
 				setLoading(false);
 			}
 		};
 
-		if (session) {
-			fetchBalance();
-		}
+		if (session) fetchBalance();
 	}, [session]);
 
+	// ✅ FIXED TOPUP FUNCTION
 	const handleTopUp = async () => {
 		if (!topupAmount || parseFloat(topupAmount) <= 0) {
-			toast.error("Please enter a valid amount");
-			return;
+			return toast.error("Please enter a valid amount");
 		}
 
 		if (parseFloat(topupAmount) < 100) {
-			toast.error("Minimum top-up amount is ₦100");
-			return;
+			return toast.error("Minimum top-up amount is ₦100");
 		}
 
 		setIsFunding(true);
@@ -69,72 +101,63 @@ export default function SettingsPage() {
 				throw new Error(data.error || "Failed to initialize payment");
 			}
 
-			// Load Interswitch script if not already loaded
-			if (!document.querySelector('script[src*="inline-checkout.js"]')) {
-				const script = document.createElement("script");
-				script.src =
-					"https://newwebpay.qa.interswitchng.com/inline-checkout.js";
-				document.body.appendChild(script);
+			// ✅ Load script safely
+			await loadInterswitchScript();
 
-				// Wait for script to load
-				await new Promise((resolve) => {
-					script.onload = resolve;
-					setTimeout(resolve, 1000);
-				});
+			// ✅ HARD CHECK
+			if (typeof window.webpayCheckout !== "function") {
+				throw new Error("Interswitch checkout failed to initialize");
 			}
 
-			// Trigger the Interswitch Modal
-			if (window.webpayCheckout) {
-				window.webpayCheckout({
-					merchant_code: data.merchantCode,
-					pay_item_id: data.payItemId,
-					txn_ref: data.txnRef,
-					amount: data.amount, // Already in Kobo
-					currency: data.currency,
-					mode: "TEST",
-					cust_email: session?.user?.email || "customer@zolt.com",
-					cust_name: session?.user?.name || "Zolt Customer",
-					site_redirect_url: `${window.location.origin}/settings?payment=success`,
-					onComplete: async (response: any) => {
-						console.log("Payment complete:", response);
+			// ✅ OPEN CHECKOUT
+			window.webpayCheckout({
+				merchant_code: data.merchantCode,
+				pay_item_id: data.payItemId,
+				txn_ref: data.txnRef,
+				amount: data.amount,
+				currency: data.currency,
+				mode: "TEST",
+				cust_email: session?.user?.email || "customer@zolt.com",
+				cust_name: session?.user?.name || "Zolt Customer",
+				site_redirect_url: `${window.location.origin}/settings?payment=success`,
 
-						// Response "00" is success code
-						if (response.resp === "00") {
-							// Verify the transaction with backend
-							const verifyRes = await fetch("/api/user/wallet/verify", {
-								method: "POST",
-								headers: { "Content-Type": "application/json" },
-								body: JSON.stringify({
-									txnRef: data.txnRef,
-									amount: parseFloat(topupAmount),
-								}),
-							});
+				onComplete: async (response: any) => {
+					console.log("Payment complete:", response);
 
-							const verifyData = await verifyRes.json();
+					if (response.resp === "00") {
+						const verifyRes = await fetch("/api/user/wallet/verify", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								txnRef: data.txnRef,
+								amount: parseFloat(topupAmount),
+							}),
+						});
 
-							if (verifyRes.ok) {
-								setBalance(verifyData.newBalance);
-								toast.success(`₦${topupAmount} added to your wallet!`);
-								setTopupAmount("");
-							} else {
-								toast.error("Payment verified but balance update failed");
-							}
+						const verifyData = await verifyRes.json();
+
+						if (verifyRes.ok) {
+							setBalance(verifyData.newBalance);
+							toast.success(`₦${topupAmount} added to your wallet!`);
+							setTopupAmount("");
 						} else {
-							toast.error(`Payment ${response.desc || "failed or cancelled"}`);
+							toast.error("Payment verified but balance update failed");
 						}
-						setIsFunding(false);
-					},
-				});
-			} else {
-				throw new Error("WebPay checkout not loaded");
-			}
+					} else {
+						toast.error(response.desc || "Payment failed or cancelled");
+					}
+
+					setIsFunding(false);
+				},
+			});
 		} catch (error: any) {
-			console.error("Topup error:", error);
-			toast.error(error.message || "Failed to initiate payment");
+			console.error(error);
+			toast.error(error.message || "Payment failed");
 			setIsFunding(false);
 		}
 	};
 
+	// UI untouched
 	if (loading) {
 		return (
 			<div className="flex min-h-screen bg-[#F8F9FA]">
@@ -159,7 +182,6 @@ export default function SettingsPage() {
 				</header>
 
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-					{/* Wallet Section */}
 					<div className="lg:col-span-2 space-y-6">
 						<section className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
 							<div className="flex justify-between items-center mb-8">
@@ -202,6 +224,7 @@ export default function SettingsPage() {
 										Min: ₦100 | Powered by Interswitch
 									</p>
 								</div>
+
 								<button
 									onClick={handleTopUp}
 									disabled={
@@ -218,7 +241,6 @@ export default function SettingsPage() {
 							</div>
 						</section>
 
-						{/* Security Section */}
 						<section className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
 							<h2 className="font-black text-xl mb-6">Security Settings</h2>
 							<div className="space-y-4">
@@ -237,7 +259,6 @@ export default function SettingsPage() {
 						</section>
 					</div>
 
-					{/* Right Info Column */}
 					<div className="space-y-6">
 						<div className="bg-[#00425F] text-white p-8 rounded-[32px] relative overflow-hidden">
 							<ShieldCheck className="absolute -right-4 -bottom-4 text-white/10 w-32 h-32" />

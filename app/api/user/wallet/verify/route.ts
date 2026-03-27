@@ -15,9 +15,6 @@ export async function POST(req: Request) {
 
 		await connectDB();
 
-		// In production, you would verify with Interswitch API here
-		// For demo, we'll simulate successful verification
-
 		const user = await User.findOne({ email: session.user.email });
 
 		if (!user) {

@@ -28,7 +28,7 @@ export async function POST(req: Request) {
 					txnId: txn_ref,
 					recipient: "Self (Wallet Top-up)",
 					amountNgn: amountNgn,
-					amountUsd: amountNgn / 1500, // Using current rate
+					amountUsd: amountNgn / 1500,
 					rate: 1500,
 					status: "Completed",
 					createdAt: new Date(),
