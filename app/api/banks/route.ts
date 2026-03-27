@@ -1,5 +1,5 @@
 // app/api/banks/route.ts
-import { getBanks } from "@/lib/interswitch-v5";
+import { getBanks } from "@/lib/paystack";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
@@ -12,9 +12,15 @@ export async function GET() {
 
 		const banks = await getBanks();
 
+		// Format banks for dropdown
+		const formattedBanks = banks.map((bank: any) => ({
+			code: bank.code,
+			name: bank.name,
+		}));
+
 		return NextResponse.json({
 			success: true,
-			banks: banks,
+			banks: formattedBanks,
 		});
 	} catch (error: any) {
 		console.error("Error fetching banks:", error);

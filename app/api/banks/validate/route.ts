@@ -1,5 +1,5 @@
 // app/api/banks/validate/route.ts
-import { nameEnquiry } from "@/lib/interswitch-v5";
+import { resolveAccountNumber } from "@/lib/paystack";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
@@ -26,18 +26,19 @@ export async function POST(req: Request) {
 			);
 		}
 
-		const result = await nameEnquiry(bankCode, accountNumber);
+		try {
+			const result = await resolveAccountNumber(bankCode, accountNumber);
 
-		if (result.success) {
 			return NextResponse.json({
 				success: true,
 				accountName: result.accountName,
 				accountNumber: result.accountNumber,
 				bankCode: result.bankCode,
 			});
-		} else {
+		} catch (error: any) {
+			console.error("Name enquiry error:", error);
 			return NextResponse.json(
-				{ error: result.error || "Account validation failed" },
+				{ error: error.message || "Account validation failed" },
 				{ status: 400 },
 			);
 		}

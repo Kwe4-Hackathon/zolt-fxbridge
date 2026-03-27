@@ -1,6 +1,5 @@
-// app/api/history/route.ts
+// app/api/transactions/history/route.ts
 import { connectDB } from "@/lib/mongodb";
-import Transaction from "@/models/Transaction";
 import User from "@/models/User";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -8,7 +7,7 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
 	try {
 		const session = await getServerSession();
-		if (!session || !session.user) {
+		if (!session || !session.user?.email) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
 
@@ -23,19 +22,38 @@ export async function GET(request: Request) {
 			return NextResponse.json({ error: "User not found" }, { status: 404 });
 		}
 
-		let query: any = {};
+		let transactions = user.transactions || [];
 
-		let transactions = await Transaction.find(query).sort({ createdAt: -1 });
+		transactions = transactions.sort(
+			(a: any, b: any) =>
+				new Date(b.createdAt || b.date).getTime() -
+				new Date(a.createdAt || a.date).getTime(),
+		);
 
 		if (search) {
 			transactions = transactions.filter(
 				(tx: any) =>
 					tx.txnId?.toLowerCase().includes(search.toLowerCase()) ||
-					tx.recipient?.toLowerCase().includes(search.toLowerCase()),
+					tx.recipient?.toLowerCase().includes(search.toLowerCase()) ||
+					tx.description?.toLowerCase().includes(search.toLowerCase()),
 			);
 		}
 
-		return NextResponse.json(transactions, { status: 200 });
+		const formattedTransactions = transactions.map((tx: any) => ({
+			_id: tx._id || tx.txnId,
+			txnId: tx.txnId,
+			recipient: tx.recipient || "Wallet Top-up",
+			amountNgn: tx.amountNgn || tx.amount || 0,
+			amountUsd: tx.amountUsd || 0,
+			status: tx.status || "Completed",
+			createdAt: tx.createdAt || tx.date || new Date(),
+			bankName: tx.bankName,
+			accountNumber: tx.recipientAccount,
+			type: tx.type || (tx.recipient === "Wallet Top-up" ? "credit" : "debit"),
+			description: tx.description || tx.narration,
+		}));
+
+		return NextResponse.json(formattedTransactions, { status: 200 });
 	} catch (error) {
 		console.error("History API Error:", error);
 		return NextResponse.json(

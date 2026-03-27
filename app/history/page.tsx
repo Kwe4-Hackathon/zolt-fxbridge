@@ -1,12 +1,15 @@
+// app/history/page.tsx
 "use client";
 import Sidebar from "@/components/Sidebar";
 import {
+	ArrowDownCircle,
 	ArrowUpRight,
 	ChevronLeft,
 	ChevronRight,
 	Download,
 	Filter,
 	Search,
+	Wallet,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -21,6 +24,8 @@ interface Transaction {
 	createdAt: string;
 	bankName?: string;
 	accountNumber?: string;
+	type?: "credit" | "debit";
+	description?: string;
 }
 
 export default function HistoryPage() {
@@ -32,6 +37,10 @@ export default function HistoryPage() {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
 	const [itemsPerPage] = useState(10);
+	const [filterType, setFilterType] = useState<"all" | "credit" | "debit">(
+		"all",
+	);
+	const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
 	useEffect(() => {
 		const fetchHistory = async () => {
@@ -39,10 +48,11 @@ export default function HistoryPage() {
 				const res = await fetch("/api/transactions/history");
 				if (!res.ok) throw new Error("Failed to fetch");
 				const data = await res.json();
-				console.log("data", data);
+				console.log("Transactions:", data);
 				setTransactions(data);
 				setFilteredTransactions(data);
 			} catch (err) {
+				console.error("Fetch error:", err);
 				toast.error("Could not load transaction history");
 			} finally {
 				setLoading(false);
@@ -51,20 +61,28 @@ export default function HistoryPage() {
 		fetchHistory();
 	}, []);
 
-	// Handle search
+	// Handle search and filter
 	useEffect(() => {
-		if (searchTerm.trim() === "") {
-			setFilteredTransactions(transactions);
-		} else {
-			const filtered = transactions.filter(
+		let filtered = transactions;
+
+		// Apply search filter
+		if (searchTerm.trim() !== "") {
+			filtered = filtered.filter(
 				(tx) =>
 					tx.txnId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					tx.recipient?.toLowerCase().includes(searchTerm.toLowerCase()),
+					tx.recipient?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+					tx.description?.toLowerCase().includes(searchTerm.toLowerCase()),
 			);
-			setFilteredTransactions(filtered);
 		}
+
+		// Apply type filter
+		if (filterType !== "all") {
+			filtered = filtered.filter((tx) => tx.type === filterType);
+		}
+
+		setFilteredTransactions(filtered);
 		setCurrentPage(1);
-	}, [searchTerm, transactions]);
+	}, [searchTerm, transactions, filterType]);
 
 	// Pagination
 	const indexOfLastItem = currentPage * itemsPerPage;
@@ -98,7 +116,8 @@ export default function HistoryPage() {
 	const exportToCSV = () => {
 		const headers = [
 			"Transaction ID",
-			"Recipient",
+			"Type",
+			"Recipient/Description",
 			"Date",
 			"Amount (NGN)",
 			"Amount (USD)",
@@ -106,15 +125,16 @@ export default function HistoryPage() {
 		];
 		const csvData = filteredTransactions.map((tx) => [
 			tx.txnId,
-			tx.recipient,
+			tx.type === "credit" ? "Wallet Top-up" : "Transfer",
+			tx.recipient || tx.description || "-",
 			new Date(tx.createdAt).toLocaleDateString(),
 			tx.amountNgn,
-			tx.amountUsd,
+			tx.amountUsd || "-",
 			tx.status,
 		]);
 
 		const csvContent = [headers, ...csvData]
-			.map((row) => row.join(","))
+			.map((row) => row.map((cell) => `"${cell}"`).join(","))
 			.join("\n");
 		const blob = new Blob([csvContent], { type: "text/csv" });
 		const url = window.URL.createObjectURL(blob);
@@ -126,19 +146,27 @@ export default function HistoryPage() {
 		toast.success("Export started");
 	};
 
+	// Calculate summary
+	const totalCredit = transactions
+		.filter((t) => t.type === "credit")
+		.reduce((sum, t) => sum + t.amountNgn, 0);
+	const totalDebit = transactions
+		.filter((t) => t.type === "debit")
+		.reduce((sum, t) => sum + t.amountNgn, 0);
+
 	return (
 		<div className="flex min-h-screen bg-[#F8F9FA]">
 			<Sidebar active="history" />
 
 			<main className="flex-1 p-4 sm:p-6 md:p-8 lg:p-12 overflow-x-hidden">
-				{/* Header - Responsive */}
+				{/* Header */}
 				<header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6 sm:mb-8 md:mb-10">
 					<div>
 						<h1 className="text-2xl sm:text-3xl font-black text-[#1A1A1A]">
 							Transaction History
 						</h1>
 						<p className="text-sm sm:text-base text-gray-500 font-medium">
-							Monitor and manage your FX conversions
+							Monitor and manage your wallet activity
 						</p>
 					</div>
 					<button
@@ -148,7 +176,33 @@ export default function HistoryPage() {
 					</button>
 				</header>
 
-				{/* Filters & Search - Responsive */}
+				{/* Summary Cards */}
+				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+					<div className="bg-white rounded-2xl p-4 border border-gray-100">
+						<div className="flex items-center gap-2 text-gray-500 mb-2">
+							<ArrowDownCircle size={16} className="text-green-500" />
+							<span className="text-xs font-bold uppercase">
+								Total Deposits
+							</span>
+						</div>
+						<p className="text-2xl font-black text-green-600">
+							₦{totalCredit.toLocaleString()}
+						</p>
+					</div>
+					<div className="bg-white rounded-2xl p-4 border border-gray-100">
+						<div className="flex items-center gap-2 text-gray-500 mb-2">
+							<ArrowUpRight size={16} className="text-red-500" />
+							<span className="text-xs font-bold uppercase">
+								Total Payments
+							</span>
+						</div>
+						<p className="text-2xl font-black text-red-500">
+							₦{totalDebit.toLocaleString()}
+						</p>
+					</div>
+				</div>
+
+				{/* Filters & Search */}
 				<div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
 					<div className="relative flex-1">
 						<Search
@@ -159,13 +213,50 @@ export default function HistoryPage() {
 							type="text"
 							value={searchTerm}
 							onChange={(e) => setSearchTerm(e.target.value)}
-							placeholder="Search by Transaction ID or Recipient..."
+							placeholder="Search by Transaction ID, Recipient, or Description..."
 							className="w-full pl-9 sm:pl-12 pr-4 py-2.5 sm:py-3 bg-white border rounded-xl sm:rounded-2xl outline-none focus:ring-2 focus:ring-[#34A853]/10 focus:border-[#34A853] transition text-sm sm:text-base"
 						/>
 					</div>
-					<button className="flex items-center justify-center gap-2 bg-white border px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-gray-600 text-sm sm:text-base">
-						<Filter size={16} /> Filter
-					</button>
+					<div className="relative">
+						<button
+							onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+							className="flex items-center justify-center gap-2 bg-white border px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-gray-600 text-sm sm:text-base min-w-[100px]">
+							<Filter size={16} />
+							{filterType === "all"
+								? "All"
+								: filterType === "credit"
+									? "Deposits"
+									: "Transfers"}
+						</button>
+						{showFilterDropdown && (
+							<div className="absolute top-full mt-2 right-0 bg-white border rounded-xl shadow-lg z-10 min-w-[120px]">
+								<button
+									onClick={() => {
+										setFilterType("all");
+										setShowFilterDropdown(false);
+									}}
+									className="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-t-xl text-sm">
+									All Transactions
+								</button>
+								<button
+									onClick={() => {
+										setFilterType("credit");
+										setShowFilterDropdown(false);
+									}}
+									className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">
+									Deposits (Top-ups)
+								</button>
+								<button
+									onClick={() => {
+										setFilterType("debit");
+										setShowFilterDropdown(false);
+									}}
+									className="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-b-xl text-sm">
+									Transfers (Payments)
+								</button>
+							</div>
+						)}
+					</div>
 				</div>
 
 				{/* Mobile Cards View */}
@@ -179,9 +270,12 @@ export default function HistoryPage() {
 						))
 					) : currentTransactions.length === 0 ? (
 						<div className="bg-white rounded-2xl p-8 text-center">
+							<Wallet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
 							<p className="text-gray-400 font-medium">No transactions found</p>
 							<p className="text-sm text-gray-300 mt-1">
-								Start by converting currency!
+								{searchTerm
+									? "Try a different search term"
+									: "Your transactions will appear here"}
 							</p>
 						</div>
 					) : (
@@ -191,8 +285,15 @@ export default function HistoryPage() {
 								className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
 								<div className="flex justify-between items-start mb-3">
 									<div className="flex items-center gap-2">
-										<div className="bg-[#E8F5E9] p-2 rounded-lg">
-											<ArrowUpRight size={14} className="text-[#34A853]" />
+										<div
+											className={`p-2 rounded-lg ${
+												txn.type === "credit" ? "bg-green-50" : "bg-[#E8F5E9]"
+											}`}>
+											{txn.type === "credit" ? (
+												<ArrowDownCircle size={14} className="text-green-500" />
+											) : (
+												<ArrowUpRight size={14} className="text-[#34A853]" />
+											)}
 										</div>
 										<div>
 											<p className="font-bold text-sm">{txn.txnId}</p>
@@ -203,40 +304,54 @@ export default function HistoryPage() {
 									</div>
 									<span
 										className={`
-											px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider
-											${txn.status === "Completed" ? "bg-[#E8F5E9] text-[#34A853]" : "bg-amber-50 text-amber-600"}
-										`}>
+                                            px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider
+                                            ${txn?.status === "Completed" ? "bg-[#E8F5E9] text-[#34A853]" : "bg-amber-50 text-amber-600"}
+                                        `}>
 										{txn.status}
 									</span>
 								</div>
 
 								<div className="border-t border-gray-50 pt-3 space-y-2">
 									<div className="flex justify-between">
-										<span className="text-xs text-gray-400">Recipient</span>
+										<span className="text-xs text-gray-400">
+											{txn?.type === "credit" ? "Description" : "Recipient"}
+										</span>
 										<span className="text-sm font-medium text-right">
-											{txn.recipient}
+											{txn.type === "credit"
+												? txn?.description || "Wallet Top-up"
+												: txn?.recipient}
 										</span>
 									</div>
 									<div className="flex justify-between">
 										<span className="text-xs text-gray-400">Amount (NGN)</span>
-										<span className="text-sm font-bold">
-											₦{txn.amountNgn.toLocaleString()}
+										<span
+											className={`text-sm font-bold ${
+												txn.type === "credit"
+													? "text-green-600"
+													: "text-red-500"
+											}`}>
+											{txn.type === "credit" ? "+" : "-"}₦
+											{txn?.amountNgn?.toLocaleString()}
 										</span>
 									</div>
-									<div className="flex justify-between">
-										<span className="text-xs text-gray-400">Amount (USD)</span>
-										<span className="text-sm font-bold text-[#34A853]">
-											$
-											{txn.amountUsd.toLocaleString(undefined, {
-												minimumFractionDigits: 2,
-											})}
-										</span>
-									</div>
+									{txn.amountUsd > 0 && (
+										<div className="flex justify-between">
+											<span className="text-xs text-gray-400">
+												Amount (USD)
+											</span>
+											<span className="text-sm font-bold text-[#34A853]">
+												$
+												{txn?.amountUsd.toLocaleString(undefined, {
+													minimumFractionDigits: 2,
+												})}
+											</span>
+										</div>
+									)}
 									{txn.bankName && (
 										<div className="flex justify-between">
 											<span className="text-xs text-gray-400">Bank</span>
 											<span className="text-xs text-gray-600">
-												{txn.bankName}
+												{txn?.bankName}
 											</span>
 										</div>
 									)}
@@ -255,16 +370,16 @@ export default function HistoryPage() {
 									Transaction
 								</th>
 								<th className="px-6 lg:px-8 py-4 lg:py-5 text-xs font-black text-gray-400 uppercase tracking-widest">
-									Recipient
+									Type
+								</th>
+								<th className="px-6 lg:px-8 py-4 lg:py-5 text-xs font-black text-gray-400 uppercase tracking-widest">
+									Recipient/Description
 								</th>
 								<th className="px-6 lg:px-8 py-4 lg:py-5 text-xs font-black text-gray-400 uppercase tracking-widest">
 									Date
 								</th>
 								<th className="px-6 lg:px-8 py-4 lg:py-5 text-xs font-black text-gray-400 uppercase tracking-widest">
 									Amount (NGN)
-								</th>
-								<th className="px-6 lg:px-8 py-4 lg:py-5 text-xs font-black text-gray-400 uppercase tracking-widest">
-									Amount (USD)
 								</th>
 								<th className="px-6 lg:px-8 py-4 lg:py-5 text-xs font-black text-gray-400 uppercase tracking-widest">
 									Status
@@ -285,7 +400,7 @@ export default function HistoryPage() {
 									<td
 										colSpan={6}
 										className="px-8 py-20 text-center text-gray-400 font-medium">
-										No transactions found. Start by converting currency!
+										No transactions found
 									</td>
 								</tr>
 							) : (
@@ -295,8 +410,23 @@ export default function HistoryPage() {
 										className="hover:bg-gray-50/80 transition-colors group">
 										<td className="px-6 lg:px-8 py-5 lg:py-6">
 											<div className="flex items-center gap-3">
-												<div className="bg-[#E8F5E9] p-2 rounded-lg text-[#34A853]">
-													<ArrowUpRight size={16} />
+												<div
+													className={`p-2 rounded-lg ${
+														txn.type === "credit"
+															? "bg-green-50"
+															: "bg-[#E8F5E9]"
+													}`}>
+													{txn.type === "credit" ? (
+														<ArrowDownCircle
+															size={16}
+															className="text-green-500"
+														/>
+													) : (
+														<ArrowUpRight
+															size={16}
+															className="text-[#34A853]"
+														/>
+													)}
 												</div>
 												<span className="font-bold text-sm text-[#1A1A1A]">
 													{txn.txnId}
@@ -304,31 +434,45 @@ export default function HistoryPage() {
 											</div>
 										</td>
 										<td className="px-6 lg:px-8 py-5 lg:py-6">
-											<p className="font-bold text-sm text-[#1A1A1A]">
-												{txn.recipient}
+											<span
+												className={`text-xs px-2 py-1 rounded-full ${
+													txn.type === "credit"
+														? "bg-green-100 text-green-700"
+														: "bg-blue-100 text-blue-700"
+												}`}>
+												{txn.type === "credit" ? "Top-up" : "Transfer"}
+											</span>
+										</td>
+										<td className="px-6 lg:px-8 py-5 lg:py-6">
+											<p className="font-medium text-sm text-[#1A1A1A]">
+												{txn.type === "credit"
+													? txn.description || "Wallet Top-up"
+													: txn.recipient}
 											</p>
 											{txn.bankName && (
-												<p className="text-xs text-gray-400">{txn.bankName}</p>
+												<p className="text-xs text-gray-400">{txn?.bankName}</p>
 											)}
 										</td>
 										<td className="px-6 lg:px-8 py-5 lg:py-6 text-sm text-gray-500 font-medium">
-											{formatDate(txn.createdAt)}
+											{formatDate(txn?.createdAt)}
 										</td>
-										<td className="px-6 lg:px-8 py-5 lg:py-6 font-black text-sm">
-											₦{txn.amountNgn.toLocaleString()}
-										</td>
-										<td className="px-6 lg:px-8 py-5 lg:py-6 font-black text-sm text-[#34A853]">
-											$
-											{txn.amountUsd.toLocaleString(undefined, {
-												minimumFractionDigits: 2,
-											})}
+										<td className="px-6 lg:px-8 py-5 lg:py-6">
+											<span
+												className={`font-black text-sm ${
+													txn.type === "credit"
+														? "text-green-600"
+														: "text-red-500"
+												}`}>
+												{txn.type === "credit" ? "+" : "-"}₦
+												{txn?.amountNgn?.toLocaleString()}
+											</span>
 										</td>
 										<td className="px-6 lg:px-8 py-5 lg:py-6">
 											<span
 												className={`
-													px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider
-													${txn.status === "Completed" ? "bg-[#E8F5E9] text-[#34A853]" : "bg-amber-50 text-amber-600"}
-												`}>
+                                                px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider
+                                                ${txn.status === "Completed" ? "bg-[#E8F5E9] text-[#34A853]" : "bg-amber-50 text-amber-600"}
+                                            `}>
 												{txn.status}
 											</span>
 										</td>
@@ -339,7 +483,7 @@ export default function HistoryPage() {
 					</table>
 				</div>
 
-				{/* Pagination Footer - Responsive */}
+				{/* Pagination */}
 				{filteredTransactions.length > 0 && (
 					<div className="mt-6 sm:mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 px-2 sm:px-4">
 						<p className="text-xs sm:text-sm text-gray-500 font-medium order-2 sm:order-1">
@@ -367,19 +511,18 @@ export default function HistoryPage() {
 									} else {
 										pageNum = currentPage - 2 + i;
 									}
-
 									return (
 										<button
 											key={i}
 											onClick={() => setCurrentPage(pageNum)}
 											className={`
-												w-8 h-8 sm:w-10 sm:h-10 rounded-xl text-sm font-bold transition
-												${
-													currentPage === pageNum
-														? "bg-[#34A853] text-white"
-														: "bg-white border text-gray-600 hover:bg-gray-50"
-												}
-											`}>
+                                                w-8 h-8 sm:w-10 sm:h-10 rounded-xl text-sm font-bold transition
+                                                ${
+																									currentPage === pageNum
+																										? "bg-[#34A853] text-white"
+																										: "bg-white border text-gray-600 hover:bg-gray-50"
+																								}
+                                            `}>
 											{pageNum}
 										</button>
 									);

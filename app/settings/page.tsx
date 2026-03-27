@@ -1,163 +1,178 @@
+// app/settings/page.tsx
 "use client";
 import Sidebar from "@/components/Sidebar";
-import { CreditCard, Loader2, Plus, ShieldCheck, Wallet } from "lucide-react";
+import {
+	AlertCircle,
+	CreditCard,
+	Loader2,
+	Plus,
+	ShieldCheck,
+	Wallet,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 declare global {
 	interface Window {
-		webpayCheckout: (params: any) => void;
+		PaystackPop: any;
 	}
 }
 
 export default function SettingsPage() {
-	const { data: session } = useSession();
+	const { data: session, status } = useSession();
 	const [balance, setBalance] = useState(0);
 	const [topupAmount, setTopupAmount] = useState("");
 	const [isFunding, setIsFunding] = useState(false);
 	const [loading, setLoading] = useState(true);
+	const [paystackLoaded, setPaystackLoaded] = useState(false);
 
-	// ✅ PROPER SCRIPT LOADER
-	const loadInterswitchScript = () => {
-		return new Promise<void>((resolve, reject) => {
-			if (typeof window.webpayCheckout === "function") return resolve();
-
-			const sources = [
-				"https://webpay.interswitchng.com/inline-checkout.js",
-				"https://newwebpay.interswitchng.com/inline-checkout.js",
-			];
-
-			let loaded = false;
-
-			const loadScript = (index: number) => {
-				if (index >= sources.length) {
-					return reject(new Error("All Interswitch script sources failed"));
-				}
-
-				const script = document.createElement("script");
-				script.src = sources[index];
-				script.async = true;
-
-				script.onload = () => {
-					loaded = true;
-					resolve();
-				};
-
-				script.onerror = () => {
-					console.warn(`Failed loading: ${sources[index]}`);
-					loadScript(index + 1);
-				};
-
-				document.body.appendChild(script);
-			};
-
-			loadScript(0);
-		});
-	};
-
-	// Fetch balance
+	// Load Paystack script
 	useEffect(() => {
-		const fetchBalance = async () => {
-			try {
-				const res = await fetch("/api/user/balance");
-				const data = await res.json();
-				if (res.ok) setBalance(data.balance);
-			} catch (error) {
-				console.error(error);
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		if (session) fetchBalance();
-	}, [session]);
-
-	// ✅ FIXED TOPUP FUNCTION
-	const handleTopUp = async () => {
-		if (!topupAmount || parseFloat(topupAmount) <= 0) {
-			return toast.error("Please enter a valid amount");
+		if (window.PaystackPop) {
+			setPaystackLoaded(true);
+			return;
 		}
 
-		if (parseFloat(topupAmount) < 100) {
-			return toast.error("Minimum top-up amount is ₦100");
+		const script = document.createElement("script");
+		script.src = "https://js.paystack.co/v1/inline.js";
+		script.async = true;
+		script.onload = () => {
+			console.log("Paystack script loaded");
+			setPaystackLoaded(true);
+		};
+		script.onerror = () => {
+			console.error("Failed to load Paystack script");
+			toast.error("Payment service unavailable. Please refresh.");
+		};
+		document.body.appendChild(script);
+	}, []);
+
+	const fetchUserData = useCallback(async () => {
+		if (status !== "authenticated") return;
+
+		try {
+			const balanceRes = await fetch("/api/user/balance");
+			const balanceData = await balanceRes.json();
+			if (balanceRes.ok) {
+				setBalance(balanceData.balance);
+			}
+		} catch (error) {
+			console.error("Failed to fetch data:", error);
+		} finally {
+			setLoading(false);
+		}
+	}, [status]);
+
+	useEffect(() => {
+		fetchUserData();
+	}, [fetchUserData]);
+
+	const paymentCallback = (response: any) => {
+		console.log("Payment callback received:", response);
+
+		if (response.status === "success") {
+			toast.loading("Verifying payment...", { id: "verify" });
+
+			fetch("/api/user/wallet/verify", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ reference: response.reference }),
+			})
+				.then(async (res) => {
+					const data = await res.json();
+					toast.dismiss("verify");
+
+					if (data.success) {
+						setBalance(data.newBalance);
+						toast.success(
+							`₦${data.amount.toLocaleString()} added to your wallet!`,
+						);
+						fetchUserData();
+						localStorage.removeItem("pending_topup");
+					} else {
+						toast.error(data.error || "Verification failed");
+					}
+				})
+				.catch((error) => {
+					toast.dismiss("verify");
+					console.error("Verification error:", error);
+					toast.error("Failed to verify payment");
+				})
+				.finally(() => {
+					setIsFunding(false);
+				});
+		} else {
+			toast.error("Payment was not successful");
+			setIsFunding(false);
+		}
+	};
+
+	const paymentClose = () => {
+		console.log("Payment window closed");
+		toast.error("Payment cancelled");
+		setIsFunding(false);
+	};
+
+	const handleTopUp = async () => {
+		if (!topupAmount || parseFloat(topupAmount) <= 0) {
+			toast.error("Please enter a valid amount");
+			return;
+		}
+
+		const amount = parseFloat(topupAmount);
+		if (amount < 100) {
+			toast.error("Minimum top-up amount is ₦100");
+			return;
+		}
+
+		if (!window.PaystackPop) {
+			toast.error("Payment service is still loading. Please wait a moment.");
+			return;
 		}
 
 		setIsFunding(true);
 
 		try {
-			const res = await fetch("/api/user/wallet/topup", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					amount: parseFloat(topupAmount),
-					email: session?.user?.email,
+			// Generate unique reference
+			const reference = `ZLT-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+
+			// Store reference for verification
+			localStorage.setItem(
+				"pending_topup",
+				JSON.stringify({
+					reference: reference,
+					amount: amount,
+					timestamp: Date.now(),
 				}),
+			);
+
+			// Configure Paystack - using the exact format Paystack expects
+			const config = {
+				key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+				email: session?.user?.email,
+				amount: amount * 100, // Convert to kobo
+				ref: reference,
+				currency: "NGN",
+				callback: paymentCallback,
+				onClose: paymentClose,
+			};
+
+			console.log("Opening Paystack with config:", {
+				...config,
+				key: "***hidden***",
 			});
 
-			const data = await res.json();
-
-			if (!res.ok) {
-				throw new Error(data.error || "Failed to initialize payment");
-			}
-
-			// ✅ Load script safely
-			await loadInterswitchScript();
-
-			// ✅ HARD CHECK
-			if (typeof window.webpayCheckout !== "function") {
-				throw new Error("Interswitch checkout failed to initialize");
-			}
-
-			// ✅ OPEN CHECKOUT
-			window.webpayCheckout({
-				merchant_code: data.merchantCode,
-				pay_item_id: data.payItemId,
-				txn_ref: data.txnRef,
-				amount: data.amount,
-				currency: data.currency,
-				mode: "TEST",
-				cust_email: session?.user?.email || "customer@zolt.com",
-				cust_name: session?.user?.name || "Zolt Customer",
-				site_redirect_url: `${window.location.origin}/settings?payment=success`,
-
-				onComplete: async (response: any) => {
-					console.log("Payment complete:", response);
-
-					if (response.resp === "00") {
-						const verifyRes = await fetch("/api/user/wallet/verify", {
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								txnRef: data.txnRef,
-								amount: parseFloat(topupAmount),
-							}),
-						});
-
-						const verifyData = await verifyRes.json();
-
-						if (verifyRes.ok) {
-							setBalance(verifyData.newBalance);
-							toast.success(`₦${topupAmount} added to your wallet!`);
-							setTopupAmount("");
-						} else {
-							toast.error("Payment verified but balance update failed");
-						}
-					} else {
-						toast.error(response.desc || "Payment failed or cancelled");
-					}
-
-					setIsFunding(false);
-				},
-			});
+			// Open Paystack popup
+			const handler = window.PaystackPop.setup(config);
+			handler.openIframe();
 		} catch (error: any) {
-			console.error(error);
-			toast.error(error.message || "Payment failed");
+			console.error("Topup error:", error);
+			toast.error(error.message || "Failed to initiate payment");
 			setIsFunding(false);
 		}
 	};
 
-	// UI untouched
 	if (loading) {
 		return (
 			<div className="flex min-h-screen bg-[#F8F9FA]">
@@ -172,8 +187,7 @@ export default function SettingsPage() {
 	return (
 		<div className="flex min-h-screen bg-[#F8F9FA]">
 			<Sidebar active="settings" />
-
-			<main className="flex-1 p-12">
+			<main className="flex-1 p-12 overflow-y-auto">
 				<header className="mb-10">
 					<h1 className="text-3xl font-black text-[#1A1A1A]">Settings</h1>
 					<p className="text-gray-500 font-medium">
@@ -218,19 +232,23 @@ export default function SettingsPage() {
 										onChange={(e) => setTopupAmount(e.target.value)}
 										className="bg-transparent text-2xl font-black outline-none w-full"
 										min="100"
+										max="1000000"
 										step="100"
+										disabled={isFunding}
 									/>
 									<p className="text-xs text-gray-400 mt-1">
-										Min: ₦100 | Powered by Interswitch
+										Min: ₦100 | Max: ₦1,000,000 | Powered by Paystack
 									</p>
 								</div>
-
 								<button
 									onClick={handleTopUp}
 									disabled={
-										isFunding || !topupAmount || parseFloat(topupAmount) < 100
+										isFunding ||
+										!topupAmount ||
+										parseFloat(topupAmount) < 100 ||
+										!paystackLoaded
 									}
-									className="bg-[#1A1A1A] text-white px-8 rounded-2xl font-bold flex items-center gap-2 hover:bg-black transition-all disabled:bg-gray-300 disabled:cursor-not-allowed">
+									className="bg-[#1A1A1A] text-white px-8 rounded-2xl font-bold flex items-center gap-2 hover:bg-black transition-all disabled:bg-gray-300">
 									{isFunding ? (
 										<Loader2 size={20} className="animate-spin" />
 									) : (
@@ -239,37 +257,42 @@ export default function SettingsPage() {
 									{isFunding ? "Processing..." : "Top Up"}
 								</button>
 							</div>
-						</section>
 
-						<section className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
-							<h2 className="font-black text-xl mb-6">Security Settings</h2>
-							<div className="space-y-4">
-								<div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-									<div className="flex items-center gap-3">
-										<ShieldCheck className="text-[#34A853]" />
-										<span className="font-bold text-gray-700">
-											Two-Factor Authentication
-										</span>
-									</div>
-									<div className="w-12 h-6 bg-[#34A853] rounded-full p-1 cursor-pointer">
-										<div className="w-4 h-4 bg-white rounded-full ml-auto"></div>
-									</div>
+							{!paystackLoaded && (
+								<div className="mt-4 p-3 bg-yellow-50 rounded-xl flex items-start gap-2">
+									<Loader2
+										size={16}
+										className="animate-spin text-yellow-600 mt-0.5"
+									/>
+									<p className="text-xs text-yellow-800">
+										Loading payment service...
+									</p>
 								</div>
+							)}
+
+							<div className="mt-4 p-3 bg-blue-50 rounded-xl flex items-start gap-2">
+								<AlertCircle size={16} className="text-blue-600 mt-0.5" />
+								<p className="text-xs text-blue-800">
+									Complete your payment securely with Paystack. Multiple payment
+									options available.
+								</p>
 							</div>
 						</section>
 					</div>
 
 					<div className="space-y-6">
-						<div className="bg-[#00425F] text-white p-8 rounded-[32px] relative overflow-hidden">
+						<div className="bg-gradient-to-br from-[#00425F] to-[#003349] text-white p-8 rounded-[32px] relative overflow-hidden">
 							<ShieldCheck className="absolute -right-4 -bottom-4 text-white/10 w-32 h-32" />
-							<h3 className="font-black text-lg mb-2">Interswitch Verified</h3>
+							<h3 className="font-black text-lg mb-2">Paystack Secured</h3>
 							<p className="text-sm text-blue-100 mb-6">
-								Your funds are protected by Interswitch's multi-layer security
-								protocols.
+								Your funds are protected by Paystack's enterprise-grade
+								security.
 							</p>
-							<div className="flex items-center gap-2 text-xs font-bold uppercase tracking-tighter">
-								<CreditCard size={14} />
-								PCI-DSS Compliant
+							<div className="flex flex-col gap-2 text-xs font-bold uppercase tracking-tighter">
+								<div className="flex items-center gap-2">
+									<CreditCard size={14} />
+									PCI-DSS Level 1 Compliant
+								</div>
 							</div>
 						</div>
 					</div>

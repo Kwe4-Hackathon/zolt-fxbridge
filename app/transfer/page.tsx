@@ -142,6 +142,7 @@ export default function SupplierTransfer() {
 		});
 		setSearchTerm(bank.name);
 		setShowBankDropdown(false);
+		// Reset validation
 		setAccountValid(null);
 		setAccountHolderName("");
 	};
