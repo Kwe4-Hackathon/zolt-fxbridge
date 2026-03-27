@@ -35,11 +35,11 @@ export default function LandingPage() {
 				<div className="mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20 py-12  flex flex-col lg:flex-row items-center justify-between w-full max-w-[1440px] min-h-[80vh] gap-8 lg:gap-12">
 					<div className="z-10 w-full lg:w-1/2 text-center lg:text-left px-4 sm:px-0">
 						<h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-[64px] leading-[1.2] font-black mb-4 sm:mb-6 lg:mb-8 tracking-tight">
-							Early pay, Automatic savings, Transform your money habits
+							Send money across borders. Lock the rate. Pay with confidence.
 						</h1>
 						<p className="text-gray-500 text-base sm:text-lg md:text-xl mb-6 sm:mb-8 lg:mb-10 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-							Support small businesses with simple invoicing, powerful
-							integrations, and cash flow management tools.
+							Convert NGN to USD at locked-in rates, pay international suppliers
+							instantly, and track every transaction with real-time visibility.
 						</p>
 
 						{/* Buttons */}
