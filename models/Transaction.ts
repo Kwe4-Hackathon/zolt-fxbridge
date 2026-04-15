@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 
 const TransactionSchema = new mongoose.Schema(
 	{
-		txnId: { type: String, required: true, unique: true },
+		txnId: { type: String, required: true },
 		recipient: { type: String, required: true },
 		bankName: { type: String },
 		accountNumber: { type: String },
