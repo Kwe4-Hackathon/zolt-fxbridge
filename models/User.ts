@@ -4,7 +4,6 @@ import mongoose from "mongoose";
 const TransactionSchema = new mongoose.Schema({
 	txnId: {
 		type: String,
-		unique: true,
 		sparse: true, // IMPORTANT: Only apply unique to non-null values
 		required: false,
 	},
